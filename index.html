@@ -228,6 +228,18 @@ input[type=checkbox]{width:20px;height:20px;cursor:pointer;accent-color:var(--gr
 </head>
 <body>
 
+<!-- Logout confirm modal -->
+<div id="logout-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:var(--r);padding:24px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px">¿Cerrar sesión?</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:18px">Tus datos están guardados en la nube. Podrás volver a acceder con tu nombre de equipo y PIN.</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-red" style="flex:1" onclick="doLogout()">Salir</button>
+      <button class="btn" style="flex:1" onclick="document.getElementById('logout-modal').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Loading overlay -->
 <div class="loading-wrap" id="loading-wrap">
   <div class="spinner"></div>
@@ -362,14 +374,14 @@ let effSubTab='global';
 
 // roundMode: 'hub'|'loose-config'|'training-start'|'ready'|'countdown'|'timer'|'missions'
 let roundMode='hub';
-let pendingRound={roundName:'',note:'',azulPairId:'',rojaPairId:'',trainingId:null,trainingRoundId:null};
+let pendingRound={roundName:'',note:'',azulPairId:'',rojaPairId:'',cuadrillaName:'',trainingId:null,trainingRoundId:null};
 let mState={}; // mission state for current run
 let activeTrainingId=null;
 let editingTR=null; // {trainingId, roundId}
 let editTRData={};
 // State for adding a new round to an existing training
 let addingRoundToTraining=null; // trainingId
-let newRoundData={label:'',azulPairId:'',rojaPairId:''};
+let newRoundData={label:'',azulPairId:'',rojaPairId:'',cuadrillaName:''};
 
 // ── TIMER (wall-clock, no drift) ──
 let timerRemaining=TIMER_TOTAL;
@@ -387,6 +399,7 @@ let runs=[];    // [{id,roundName,note,azulPairId,rojaPairId,missions,score,ts,t
 
 // UI helpers
 let confDel={};
+let confStop={}; // {trainingId: 'pause'|'stop'|'reuse'|null}
 let editingId={};
 let editData={};
 let nPlayerName='';
@@ -583,13 +596,19 @@ function showLoginErr(field, msg){
 }
 
 function logout(){
-  if(!confirm('¿Salir del equipo '+currentTeamName+'?')) return;
-  if(realtimeListener){ db.ref('teams/'+currentTeamId+'/data').off('value', realtimeListener); realtimeListener=null; }
-  currentTeamId=null; currentTeamName=null;
+  // Show inline modal — confirm() is blocked on GitHub Pages
+  document.getElementById('logout-modal').style.display='flex';
+}
+function doLogout(){
+  document.getElementById('logout-modal').style.display='none';
+  if(realtimeListener){db.ref('teams/'+currentTeamId+'/data').off('value',realtimeListener);realtimeListener=null;}
+  currentTeamId=null;currentTeamName=null;
   players=[];pairs=[];trainings=[];runs=[];
+  activeTrainingId=null;roundMode='hub';tab='ronda';
   localStorage.removeItem('fll_last_team');
   document.getElementById('hdr-team').textContent='';
   document.getElementById('hdr-logout').style.display='none';
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='ronda'));
   document.getElementById('login-step-pin').style.display='none';
   document.getElementById('login-step-name').style.display='block';
   document.getElementById('inp-team').value='';
@@ -787,15 +806,15 @@ function renderRonda(){
 
 /* ── HUB ── */
 function renderHub(){
-  const at=trainings.find(t=>t.status==='active');
+  const at=trainings.find(t=>t.status==='active'||t.status==='paused');
   const banner=at?
-    `<div style="background:var(--amber-l);border:1px solid #F5C4B3;border-radius:var(--r);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    `<div style="background:${at.status==='active'?'var(--amber-l)':'var(--surface2)'};border:1px solid ${at.status==='active'?'#F5C4B3':'var(--border2)'};border-radius:var(--r);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--amber)">ENTRENAMIENTO ACTIVO</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:${at.status==='active'?'var(--amber)':'var(--text3)'}">ENTRENAMIENTO ${at.status==='active'?'ACTIVO':'PAUSADO'}</div>
         <div style="font-size:15px;font-weight:500">${at.name}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">${at.rounds.filter(r=>r.completed).length}/${at.rounds.length} rondas completadas</div>
       </div>
-      <button class="btn btn-amber" onclick="resumeTraining('${at.id}')">Continuar entrenamiento</button>
+      <button class="btn ${at.status==='active'?'btn-amber':'btn-green'}" onclick="resumeTraining('${at.id}')">${at.status==='active'?'Continuar':'▶ Reanudar'}</button>
     </div>`:
     `<div style="background:var(--green-l);border:1px solid var(--green-b);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <div>
@@ -804,6 +823,42 @@ function renderHub(){
       </div>
       <button class="btn btn-sm" onclick="switchTab('entrenamientos')">Ver entrenamientos</button>
     </div>`;
+
+  // Loose runs list with inline delete
+  const looseRuns=runs.filter(r=>!r.trainingId);
+  const looseList=looseRuns.length?`
+    <div style="margin-top:16px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Mis rondas sueltas (${looseRuns.length})</div>
+      ${[...looseRuns].reverse().map(r=>{
+        const idx=runs.indexOf(r);
+        const ap=getPair(r.azulPairId);const rp=getPair(r.rojaPairId);
+        const isDel=confDel['run_'+r.id];
+        return`<div class="card" style="padding:10px 14px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700">${runLabel(r,idx)}</div>
+              ${r.cuadrillaName?`<div style="font-size:11px;color:var(--text3);margin-top:1px">${r.cuadrillaName}</div>`:''}
+              <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
+                ${ap?`<span class="bpill azul" style="font-size:10px"><span class="dot azul"></span>${ap.name}</span>`:''}
+                ${rp?`<span class="bpill roja" style="font-size:10px"><span class="dot roja"></span>${rp.name}</span>`:''}
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--green)">${r.score} pts</span>
+              ${!isDel?`<button class="btn btn-red btn-sm" onclick="askDel('run_${r.id}','run')">Borrar</button>`:''}
+            </div>
+          </div>
+          ${isDel?`<div class="conf" style="margin-top:8px">
+            <span>¿Borrar "${runLabel(r,idx)}" (${r.score} pts)?</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-red btn-sm" onclick="delRun('${r.id}')">Confirmar</button>
+              <button class="btn btn-sm" onclick="cancelDel('run_${r.id}')">Cancelar</button>
+            </div>
+          </div>`:''}
+        </div>`;
+      }).join('')}
+    </div>`:''
+
   return`<div style="margin-bottom:10px;font-size:13px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;font-family:'Barlow Condensed',sans-serif">¿Cómo quieres lanzar?</div>
   ${banner}
   <button class="hub-btn" onclick="startLoose()">
@@ -816,11 +871,12 @@ function renderHub(){
         <div class="hub-btn-sub">Sin entrenamiento — elige parejas, corre el contador y registra misiones</div>
       </div>
     </div>
-  </button>`;
+  </button>
+  ${looseList}`;
 }
 
 function startLoose(){
-  pendingRound={roundName:'',note:'',azulPairId:'',rojaPairId:'',trainingId:null,trainingRoundId:null};
+  pendingRound={roundName:'',note:'',azulPairId:'',rojaPairId:'',cuadrillaName:'',trainingId:null,trainingRoundId:null};
   roundMode='loose-config';render();
 }
 
@@ -832,14 +888,14 @@ function renderLooseConfig(){
   </div>
   <div class="form-card">
     <div class="fg">
-      <div class="field-lbl">Nombre de la ronda <span style="color:var(--red)">*</span></div>
-      <input type="text" placeholder="ej. Ronda 1, Práctica A..." value="${pendingRound.roundName}" oninput="pendingRound.roundName=this.value">
-    </div>
-    <div class="fg">
-      <div class="field-lbl">Nota adicional (opcional)</div>
-      <input type="text" placeholder="ej. segunda prueba del día..." value="${pendingRound.note}" oninput="pendingRound.note=this.value">
+      <div class="field-lbl">Nombre de la ronda <span style="font-size:11px;color:var(--text3)">(opcional)</span></div>
+      <input type="text" placeholder="ej. Ronda 1, Práctica A... (si no pones nada se nombra automático)" value="${pendingRound.roundName}" oninput="pendingRound.roundName=this.value">
     </div>
     ${pairs.length?`
+    <div class="fg">
+      <div class="field-lbl">Nombre de la cuadrilla <span style="color:var(--red)">*</span></div>
+      <input type="text" placeholder="ej. Cuadrilla A, Los Rápidos..." value="${pendingRound.cuadrillaName}" oninput="pendingRound.cuadrillaName=this.value">
+    </div>
     <div class="field-lbl">Parejas que lanzan</div>
     <div class="bases-grid">
       <div class="bbox azul"><div class="btit azul"><span class="dot azul"></span>Base Azul</div>
@@ -855,12 +911,16 @@ function renderLooseConfig(){
 }
 
 function goToReady(){
-  if(!pendingRound.roundName.trim()){showToast('Escribe el nombre de la ronda');return;}
-  stopTimerCleanup(); // reset cleanly
+  if(pairs.length && !pendingRound.cuadrillaName.trim()){
+    showToast('Ponle un nombre a la cuadrilla');return;
+  }
+  if(pendingRound.azulPairId && pendingRound.azulPairId===pendingRound.rojaPairId){
+    showToast('La misma pareja no puede estar en las dos bases');return;
+  }
+  stopTimerCleanup();
   timerRemaining=TIMER_TOTAL;
   roundMode='ready';
   render();
-  // NO auto-start here — user must press "Comenzar ronda"
 }
 
 /* ── READY SCREEN (2:30 frozen, waiting for "Comenzar ronda") ── */
@@ -1023,7 +1083,7 @@ function renderMissions(){
 
   return`<div class="score-hdr">
     <div>
-      <div style="font-size:12px;opacity:.7">${pendingRound.roundName||'Ronda'}</div>
+      <div style="font-size:12px;opacity:.7">${pendingRound.roundName||'Ronda'}${pendingRound.cuadrillaName?' · '+pendingRound.cuadrillaName:''}</div>
       <div><span class="score-big" id="mscore">${score}</span><span style="font-size:14px;opacity:.5"> / ${MAX_SCORE}</span></div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
         ${ap?`<span class="bpill azul"><span class="dot azul"></span>${ap.name}</span>`:''}
@@ -1033,7 +1093,18 @@ function renderMissions(){
     <button class="btn btn-green btn-lg" type="button" onclick="saveRun()">Guardar ronda</button>
   </div>
   ${items}
-  <div style="display:flex;gap:8px;margin-top:12px;padding-bottom:20px">
+  <div class="mcard" style="margin-top:4px">
+    <div class="mcard-head">
+      <span class="mcode" style="background:var(--text3)">NOTA</span>
+      <span class="mtitle">Observaciones</span>
+    </div>
+    <div class="prow" style="border:none;padding-top:4px">
+      <textarea id="run-note" oninput="pendingRound.note=this.value"
+        placeholder="ej. se cayó M04, buen tiempo en M07..."
+        style="width:100%;min-height:64px;padding:8px 10px;font-size:13px;font-family:'Barlow',sans-serif;border:1px solid var(--border2);border-radius:var(--rs);background:var(--surface);color:var(--text);resize:vertical">${pendingRound.note}</textarea>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:10px;padding-bottom:20px">
     <button class="btn btn-red" type="button" onclick="cancelRound()">Cancelar</button>
     <button class="btn btn-green" style="flex:1" type="button" onclick="saveRun()">Guardar ronda</button>
   </div>`;
@@ -1088,11 +1159,23 @@ function mCounter(id,d,max){
 function mToken(n){mState['fp_tok']=n;_refreshMissions();}
 
 function saveRun(){
-  if(!pendingRound.roundName.trim()){showToast('La ronda necesita un nombre');return;}
+  // Auto-name if blank
+  if(!pendingRound.roundName.trim()){
+    if(pendingRound.trainingId){
+      const t=getTraining(pendingRound.trainingId);
+      const r=t?.rounds.find(x=>x.id===pendingRound.trainingRoundId);
+      const rIdx=t?t.rounds.indexOf(r)+1:1;
+      pendingRound.roundName=r?.label?.trim()||`Ronda ${rIdx}`;
+    } else {
+      const n=runs.filter(r=>!r.trainingId).length+1;
+      pendingRound.roundName=`Ronda ${n}`;
+    }
+  }
   const score=calcScore(mState);
   const snap=JSON.parse(JSON.stringify(mState));
   const run={id:uid(),roundName:pendingRound.roundName.trim(),note:pendingRound.note.trim(),
     azulPairId:pendingRound.azulPairId,rojaPairId:pendingRound.rojaPairId,
+    cuadrillaName:(pendingRound.cuadrillaName||'').trim(),
     missions:snap,score,ts:Date.now(),
     trainingId:pendingRound.trainingId||null,trainingRoundId:pendingRound.trainingRoundId||null};
   runs.push(run);
@@ -1104,7 +1187,7 @@ function saveRun(){
   stopTimerCleanup();
   showToast(`Guardado: ${score} pts`);
   const wasT=!!pendingRound.trainingId;const tid=pendingRound.trainingId;
-  pendingRound={roundName:'',note:'',azulPairId:'',rojaPairId:'',trainingId:null,trainingRoundId:null};
+  pendingRound={roundName:'',note:'',azulPairId:'',rojaPairId:'',cuadrillaName:'',trainingId:null,trainingRoundId:null};
   mState={};
   if(wasT){activeTrainingId=tid;roundMode='training-start';}else roundMode='hub';
   render();
@@ -1115,7 +1198,8 @@ function resumeTraining(id){activeTrainingId=id;roundMode='training-start';rende
 
 function renderTrainingStart(){
   const t=getTraining(activeTrainingId);
-  if(!t){roundMode='hub';render();return'';}
+  // Critical: if training not found, go to hub WITHOUT calling render() recursively
+  if(!t){activeTrainingId=null;roundMode='hub';return renderHub();}
   const next=t.rounds.find(r=>!r.completed);
   const rows=t.rounds.map((r,i)=>{
     const isDone=r.completed;const isNext=next&&r.id===next.id;
@@ -1161,8 +1245,12 @@ function renderTrainingStart(){
     <div class="form-card" style="margin-top:10px">
       <div class="sec-lbl">Nueva lanzada</div>
       <div style="margin-bottom:8px">
-        <div class="field-lbl">Etiqueta (opcional)</div>
+        <div class="field-lbl">Etiqueta <span style="font-size:11px;color:var(--text3)">(opcional)</span></div>
         <input type="text" placeholder="ej. práctica extra, tanda 2..." value="${newRoundData.label}" oninput="newRoundData.label=this.value">
+      </div>
+      <div style="margin-bottom:8px">
+        <div class="field-lbl">Nombre de la cuadrilla <span style="color:var(--red)">*</span></div>
+        <input type="text" placeholder="ej. Cuadrilla A, Los Rápidos..." value="${newRoundData.cuadrillaName||''}" oninput="newRoundData.cuadrillaName=this.value">
       </div>
       <div class="field-lbl">Parejas</div>
       <div class="bases-grid" style="margin-bottom:10px">
@@ -1175,24 +1263,48 @@ function renderTrainingStart(){
       </div>
       <div class="row">
         <button class="btn btn-green" onclick="confirmAddRound('${t.id}')">+ Agregar lanzada</button>
-        <button class="btn btn-sm" onclick="addingRoundToTraining=null;newRoundData={label:'',azulPairId:'',rojaPairId:''};render()">Cancelar</button>
+        <button class="btn btn-sm" onclick="addingRoundToTraining=null;newRoundData={label:'',azulPairId:'',rojaPairId:'',cuadrillaName:''};render()">Cancelar</button>
       </div>
     </div>`:
-    `<button class="btn btn-sm" style="margin-top:10px;width:100%" onclick="addingRoundToTraining='${t.id}';newRoundData={label:'',azulPairId:'',rojaPairId:''};render()">
+    `<button class="btn btn-sm" style="margin-top:10px;width:100%" onclick="addingRoundToTraining='${t.id}';newRoundData={label:'',azulPairId:'',rojaPairId:'',cuadrillaName:''};render()">
       + Agregar lanzada al entrenamiento
     </button>`;
 
-  return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+  // Inline confirm banners for pause/stop/reuse
+  const cs=confStop[t.id]||null;
+  const confirmBanner=cs?`<div class="conf" style="margin-bottom:14px">
+    ${cs==='stop'?`
+      <div><div style="font-size:13px;color:var(--red);font-weight:500">¿Reiniciar "${t.name}" desde cero?</div>
+        <div style="font-size:11px;color:var(--red);margin-top:2px">Los resultados de esta sesión se borrarán. Los anteriores quedan en Estadísticas.</div></div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-red btn-sm" onclick="doStopTraining('${t.id}')">Sí, reiniciar</button>
+        <button class="btn btn-sm" onclick="confStop['${t.id}']=null;render()">Cancelar</button>
+      </div>`:cs==='reuse'?`
+      <div><div style="font-size:13px;color:var(--red);font-weight:500">¿Reutilizar "${t.name}"?</div>
+        <div style="font-size:11px;color:var(--red);margin-top:2px">Las rondas quedan como pendientes. Los resultados anteriores se mantienen.</div></div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-green btn-sm" onclick="doReuseTraining('${t.id}')">Sí, reutilizar</button>
+        <button class="btn btn-sm" onclick="confStop['${t.id}']=null;render()">Cancelar</button>
+      </div>`:''}
+  </div>`:'';
+
+  return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
     <button class="btn btn-sm" onclick="roundMode='hub';activeTrainingId=null;addingRoundToTraining=null;render()">← Volver</button>
-    <div>
+    <div style="flex:1;min-width:120px">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700">${t.name}</div>
       <div style="font-size:12px;color:var(--text3)">${t.rounds.filter(r=>r.completed).length}/${t.rounds.length} rondas completadas</div>
     </div>
+    <button class="btn btn-amber btn-sm" onclick="doPauseTraining('${t.id}')">⏸ Pausar</button>
+    <button class="btn btn-red btn-sm" onclick="confStop['${t.id}']='stop';render()">↺ Reiniciar</button>
   </div>
+  ${confirmBanner}
   ${allDone?`<div style="background:var(--green-l);border:1px solid var(--green-b);border-radius:var(--r);padding:14px;text-align:center;margin-bottom:14px">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--green)">¡Entrenamiento completado!</div>
-    <div style="font-size:13px;color:var(--text2);margin-top:4px">Puedes agregar más lanzadas abajo si lo necesitas</div>
-    <button class="btn btn-sm" style="margin-top:10px" onclick="finishTraining('${t.id}')">Cerrar entrenamiento</button>
+    <div style="font-size:13px;color:var(--text2);margin-top:4px">Puedes agregar más lanzadas o reutilizar para una nueva sesión</div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px">
+      <button class="btn btn-sm" onclick="confStop['${t.id}']='reuse';render()">↺ Reutilizar</button>
+      <button class="btn btn-sm" onclick="finishTraining('${t.id}')">Cerrar entrenamiento</button>
+    </div>
   </div>`:''}
   ${rows}
   ${addRoundForm}`;
@@ -1209,30 +1321,75 @@ function saveTREdit(tid,rid){
 function startTR(tid,rid){
   const t=getTraining(tid);if(!t)return;
   const r=t.rounds.find(x=>x.id===rid);if(!r)return;
-  pendingRound={roundName:`${t.name} — Ronda ${t.rounds.indexOf(r)+1}`,note:'',
-    azulPairId:r.azulPairId||'',rojaPairId:r.rojaPairId||'',trainingId:tid,trainingRoundId:rid};
+  const rIdx=t.rounds.indexOf(r)+1;
+  const roundName=r.label.trim()||`Ronda ${rIdx}`;
+  pendingRound={roundName:`${t.name} — ${roundName}`,note:'',
+    azulPairId:r.azulPairId||'',rojaPairId:r.rojaPairId||'',
+    cuadrillaName:r.cuadrillaName||'',
+    trainingId:tid,trainingRoundId:rid};
   stopTimerCleanup();timerRemaining=TIMER_TOTAL;roundMode='ready';render();
 }
 function finishTraining(id){
   const t=getTraining(id);if(t)t.status='completed';
   save();activeTrainingId=null;roundMode='hub';render();
 }
+function doPauseTraining(id){
+  const t=getTraining(id);if(!t)return;
+  t.status='paused';
+  save();
+  // Stay on Ronda tab — hub will show the paused banner with Reanudar
+  activeTrainingId=null;roundMode='hub';
+  tab='ronda';
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='ronda'));
+  showToast('Entrenamiento pausado');render();
+}
+function doStopTraining(id){
+  const t=getTraining(id);if(!t)return;
+  // Delete runs from this training and reset all rounds
+  runs=runs.filter(r=>r.trainingId!==id);
+  t.rounds.forEach(r=>{r.completed=false;});
+  t.status='planned';
+  confStop[id]=null;
+  save();
+  // Go to Entrenamientos tab so user can see the Iniciar button
+  activeTrainingId=null;roundMode='hub';
+  tab='entrenamientos';
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='entrenamientos'));
+  showToast('Entrenamiento reiniciado — listo para iniciar de nuevo');render();
+}
+function doReuseTraining(id){
+  const t=getTraining(id);if(!t)return;
+  // Keep old runs in history, just reset completion
+  t.rounds.forEach(r=>{r.completed=false;});
+  t.status='active';
+  confStop[id]=null;
+  activeTrainingId=id;
+  save();
+  roundMode='training-start';
+  tab='ronda';
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='ronda'));
+  showToast('Entrenamiento reutilizado');render();
+}
 
 function confirmAddRound(tid){
   const t=getTraining(tid);if(!t)return;
+  if(!(newRoundData.cuadrillaName||'').trim()){showToast('Ponle un nombre a la cuadrilla');return;}
+  if(newRoundData.azulPairId && newRoundData.azulPairId===newRoundData.rojaPairId){
+    showToast('La misma pareja no puede estar en las dos bases');return;
+  }
   const newRound={
     id:uid(),
     order:t.rounds.length,
     label:newRoundData.label.trim(),
+    cuadrillaName:(newRoundData.cuadrillaName||'').trim(),
     azulPairId:newRoundData.azulPairId||'',
     rojaPairId:newRoundData.rojaPairId||'',
     completed:false
   };
   t.rounds.push(newRound);
-  // If training was completed, reopen it
   if(t.status==='completed') t.status='active';
   addingRoundToTraining=null;
-  newRoundData={label:'',azulPairId:'',rojaPairId:''};
+  newRoundData={label:'',azulPairId:'',rojaPairId:'',cuadrillaName:''};
   save();showToast('Lanzada agregada');render();
 }
 
@@ -1242,15 +1399,19 @@ function confirmAddRound(tid){
 function renderEntrenamientos(){
   const rows=[];
   for(let i=0;i<nTrainRounds;i++){
-    if(!nTrainPairs[i])nTrainPairs[i]={azulPairId:'',rojaPairId:'',label:''};
+    if(!nTrainPairs[i])nTrainPairs[i]={azulPairId:'',rojaPairId:'',label:'',cuadrillaName:''};
     rows.push(`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;margin-bottom:8px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700">Ronda ${i+1}</div>
         ${nTrainRounds>1?`<button class="btn btn-red btn-sm" style="padding:2px 8px;font-size:11px" onclick="removeTrainRound(${i})">× Quitar</button>`:''}
       </div>
       <div style="margin-bottom:6px">
-        <div class="field-lbl">Etiqueta (opcional)</div>
+        <div class="field-lbl">Etiqueta <span style="font-size:11px;color:var(--text3)">(opcional)</span></div>
         <input type="text" placeholder="ej. práctica corta" value="${nTrainPairs[i].label||''}" oninput="nTrainPairs[${i}].label=this.value">
+      </div>
+      <div style="margin-bottom:6px">
+        <div class="field-lbl">Nombre de la cuadrilla <span style="color:var(--red)">*</span></div>
+        <input type="text" placeholder="ej. Cuadrilla A, Los Rápidos..." value="${nTrainPairs[i].cuadrillaName||''}" oninput="nTrainPairs[${i}].cuadrillaName=this.value">
       </div>
       <div class="bases-grid">
         <div class="bbox azul"><div class="btit azul"><span class="dot azul"></span>Base Azul</div>
@@ -1283,7 +1444,8 @@ function renderEntrenamientos(){
     const done=t.rounds.filter(r=>r.completed).length;
     const status=t.status||'planned';
     const isDel=confDel['t_'+t.id];
-    const slabel=status==='active'?'Activo':status==='completed'?'Completado':'Planeado';
+    const cs=confStop[t.id]||null;
+    const slabel=status==='active'?'Activo':status==='completed'?'Completado':status==='paused'?'Pausado':'Planeado';
     const scls=status==='active'?'next':status==='completed'?'done':'pending';
     return`<div class="card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
@@ -1293,11 +1455,37 @@ function renderEntrenamientos(){
           <span class="sbadge ${scls}" style="margin-top:4px;display:inline-block">${slabel}</span>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${status!=='completed'?`<button class="btn btn-green btn-sm" onclick="activateTraining('${t.id}')">▶ ${status==='active'?'Continuar':'Iniciar'}</button>`:''}
+          ${status==='active'?`
+            <button class="btn btn-green btn-sm" onclick="activateTraining('${t.id}')">▶ Continuar</button>
+            <button class="btn btn-amber btn-sm" onclick="doPauseTraining('${t.id}')">⏸ Pausar</button>
+            <button class="btn btn-red btn-sm" onclick="confStop['${t.id}']='stop';render()">↺ Reiniciar</button>
+          `:status==='paused'?`
+            <button class="btn btn-green btn-sm" onclick="activateTraining('${t.id}')">▶ Reanudar</button>
+            <button class="btn btn-red btn-sm" onclick="confStop['${t.id}']='stop';render()">↺ Reiniciar</button>
+          `:status==='completed'?`
+            <button class="btn btn-sm" onclick="confStop['${t.id}']='reuse';render()">↺ Reutilizar</button>
+          `:`
+            <button class="btn btn-green btn-sm" onclick="activateTraining('${t.id}')">▶ Iniciar</button>
+          `}
           <button class="btn btn-sm" onclick="addRoundFromList('${t.id}')">+ Lanzada</button>
           ${!isDel?`<button class="btn btn-red btn-sm" onclick="askDel('t_${t.id}','t')">Eliminar</button>`:''}
         </div>
       </div>
+      ${cs==='stop'?`<div class="conf" style="margin-top:8px">
+        <div><div style="font-size:13px;color:var(--red);font-weight:500">¿Reiniciar "${t.name}" desde cero?</div>
+          <div style="font-size:11px;color:var(--red);margin-top:2px">Los resultados de esta sesión se borrarán. Los anteriores quedan en Estadísticas.</div></div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-red btn-sm" onclick="doStopTraining('${t.id}')">Sí, reiniciar</button>
+          <button class="btn btn-sm" onclick="confStop['${t.id}']=null;render()">Cancelar</button>
+        </div>
+      </div>`:cs==='reuse'?`<div class="conf" style="margin-top:8px">
+        <div><div style="font-size:13px;color:var(--red);font-weight:500">¿Reutilizar "${t.name}"?</div>
+          <div style="font-size:11px;color:var(--red);margin-top:2px">Las rondas quedan como pendientes. Los resultados anteriores se mantienen en Estadísticas.</div></div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-green btn-sm" onclick="doReuseTraining('${t.id}')">Sí, reutilizar</button>
+          <button class="btn btn-sm" onclick="confStop['${t.id}']=null;render()">Cancelar</button>
+        </div>
+      </div>`:''}
       <div style="margin-top:10px">${t.rounds.map((r,i)=>{
         const run=runs.find(x=>x.trainingRoundId===r.id);
         const ap=getPair(r.azulPairId);const rp=getPair(r.rojaPairId);
@@ -1353,10 +1541,20 @@ function addTrainRound(){nTrainRounds++;render();}
 function removeTrainRound(i){if(nTrainRounds<=1)return;nTrainPairs.splice(i,1);nTrainRounds--;render();}
 function createTraining(){
   if(!nTrainName.trim()){showToast('Escribe el nombre del entrenamiento');return;}
+  for(let i=0;i<nTrainRounds;i++){
+    if(!(nTrainPairs[i]?.cuadrillaName||'').trim()){
+      showToast(`Ponle un nombre de cuadrilla a la Ronda ${i+1}`);return;
+    }
+    const az=nTrainPairs[i]?.azulPairId||'';
+    const ro=nTrainPairs[i]?.rojaPairId||'';
+    if(az && az===ro){
+      showToast(`Ronda ${i+1}: la misma pareja no puede estar en las dos bases`);return;
+    }
+  }
   const rounds=[];
   for(let i=0;i<nTrainRounds;i++){
     const p=nTrainPairs[i]||{};
-    rounds.push({id:uid(),order:i,label:p.label||'',azulPairId:p.azulPairId||'',rojaPairId:p.rojaPairId||'',completed:false});
+    rounds.push({id:uid(),order:i,label:p.label||'',cuadrillaName:p.cuadrillaName||'',azulPairId:p.azulPairId||'',rojaPairId:p.rojaPairId||'',completed:false});
   }
   trainings.push({id:uid(),name:nTrainName.trim(),ts:Date.now(),status:'planned',rounds});
   nTrainName='';nTrainRounds=3;nTrainPairs=[];
@@ -1557,6 +1755,7 @@ function _rcard(r,idx,meta){
     <div class="rcard-top">
       <div>
         <div class="rcard-lbl">${runLabel(r,idx)}</div>
+        ${r.note?`<div style="font-size:11px;color:var(--text3);font-style:italic;margin-top:2px">${r.note}</div>`:''}
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">
           ${ap?`<span class="bpill azul" style="font-size:10px"><span class="dot azul"></span>${ap.name}</span>`:''}
           ${rp?`<span class="bpill roja" style="font-size:10px"><span class="dot roja"></span>${rp.name}</span>`:''}
@@ -1718,27 +1917,46 @@ function _pairsSection(subset,prefix){
   }).join('');
 }
 
-/* ── POR CUADRILLA (agrupación azul+roja que compitieron juntas) ── */
+/* ── POR CUADRILLA ── */
+function _normStr(s){
+  return(s||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+}
+function _bestName(names){
+  if(!names.length)return'';
+  const score=n=>{
+    let s=0;
+    s+=(n.match(/[áéíóúüñÁÉÍÓÚÜÑ]/g)||[]).length*2;
+    if(n[0]&&n[0]===n[0].toUpperCase()&&n[0]!==n[0].toLowerCase())s+=1;
+    return s;
+  };
+  return names.reduce((a,b)=>score(b)>score(a)?b:a);
+}
 function _cuadrillasSection(subset,prefix){
   const groups={};
   subset.forEach((r,idx)=>{
     const az=r.azulPairId||'';const ro=r.rojaPairId||'';
     if(!az&&!ro)return;
-    const gkey=`${az}||${ro}`;
-    if(!groups[gkey])groups[gkey]={az,ro,refs:[],scores:[]};
+    const cuaRaw=(r.cuadrillaName||'').trim();
+    const normCua=_normStr(cuaRaw);
+    // Sort pair ids so Azul/Roja swap doesn't create two groups
+    const pairKey=[az,ro].sort().join('||');
+    const gkey=normCua?`n:${normCua}`:`p:${pairKey}`;
+    if(!groups[gkey])groups[gkey]={az,ro,names:[],refs:[],scores:[]};
+    if(cuaRaw)groups[gkey].names.push(cuaRaw);
     groups[gkey].refs.push({r,idx});
     groups[gkey].scores.push(Number(r.score));
   });
   const sorted=Object.values(groups).sort((a,b)=>(best(b.scores)||0)-(best(a.scores)||0));
   if(!sorted.length)return`<div class="empty">Sin cuadrillas registradas. Se necesitan rondas con al menos una pareja asignada.</div>`;
-  return sorted.map(({az,ro,refs,scores},ci)=>{
+  return sorted.map(({az,ro,names,refs,scores},ci)=>{
     const ap=getPair(az);const rp=getPair(ro);
     const bv=best(scores);const av=avg(scores);
+    const displayName=_bestName(names)||[ap?.name,rp?.name].filter(Boolean).join(' + ')||`Cuadrilla ${ci+1}`;
     const key=`${prefix}_cua_${ci}`;const isOpen=!!statsOpen[key];
     return`<div class="coll-card">
       <div class="coll-hdr" onclick="toggleOpen('${key}')">
         <div style="flex:1;min-width:0">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700">Cuadrilla ${ci+1}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700">${displayName}</div>
           <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
             ${ap?`<span class="bpill azul" style="font-size:10px"><span class="dot azul"></span>${ap.name}</span>`:''}
             ${rp?`<span class="bpill roja" style="font-size:10px"><span class="dot roja"></span>${rp.name}</span>`:''}
@@ -1759,7 +1977,7 @@ function _cuadrillasSection(subset,prefix){
           <div class="metric-box"><div class="lbl">Mejor</div><div class="val good">${bv}</div></div>
           <div class="metric-box"><div class="lbl">Promedio</div><div class="val">${av}</div></div>
         </div>
-        ${refs.map(({r,idx})=>_rcard(r,idx,'')).join('')}
+        ${refs.map(({r,idx})=>_rcard(r,idx,r.roundName||'')).join('')}
       </div>`:''}
     </div>`;
   }).join('');

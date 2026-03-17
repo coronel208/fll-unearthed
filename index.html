@@ -1224,15 +1224,19 @@ function renderTrainingStart(){
     const ap=getPair(r.azulPairId);const rp=getPair(r.rojaPairId);
     const runFor=runs.find(x=>x.trainingRoundId===r.id);
     const pairView=isEd?
-      `<div class="bases-grid" style="margin-top:8px">
-        <div class="bbox azul"><div class="btit azul"><span class="dot azul"></span>Base Azul</div>
-          <select id="ea_${r.id}">${pairOpts(editTRData.azul||r.azulPairId)}</select></div>
-        <div class="bbox roja"><div class="btit roja"><span class="dot roja"></span>Base Roja</div>
-          <select id="er_${r.id}">${pairOpts(editTRData.roja||r.rojaPairId)}</select></div>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <button class="btn btn-green btn-sm" onclick="saveTREdit('${t.id}','${r.id}')">Guardar</button>
-        <button class="btn btn-sm" onclick="editingTR=null;editTRData={};render()">Cancelar</button>
+      `<div style="margin-top:8px">
+        <div class="field-lbl">Nombre de la cuadrilla <span style="color:var(--red)">*</span></div>
+        <input type="text" id="ec_${r.id}" value="${editTRData.cua||r.cuadrillaName||''}" placeholder="ej. Cuadrilla A..." style="margin-bottom:8px">
+        <div class="bases-grid">
+          <div class="bbox azul"><div class="btit azul"><span class="dot azul"></span>Base Azul</div>
+            <select id="ea_${r.id}">${pairOpts(editTRData.azul||r.azulPairId)}</select></div>
+          <div class="bbox roja"><div class="btit roja"><span class="dot roja"></span>Base Roja</div>
+            <select id="er_${r.id}">${pairOpts(editTRData.roja||r.rojaPairId)}</select></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn btn-green btn-sm" onclick="saveTREdit('${t.id}','${r.id}')">Guardar</button>
+          <button class="btn btn-sm" onclick="editingTR=null;editTRData={};render()">Cancelar</button>
+        </div>
       </div>`:
       `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
         ${ap?`<span class="bpill azul"><span class="dot azul"></span>${ap.name}</span>`:'<span style="font-size:12px;color:var(--text3)">Azul: —</span>'}
@@ -1323,13 +1327,19 @@ function renderTrainingStart(){
   ${addRoundForm}`;
 }
 
-function editTR(tid,rid,az,rj){editingTR={trainingId:tid,roundId:rid};editTRData={azul:az,roja:rj};render();}
+function editTR(tid,rid,az,rj,cua){editingTR={trainingId:tid,roundId:rid};editTRData={azul:az,roja:rj,cua:cua||''};render();}
 function saveTREdit(tid,rid){
   const t=getTraining(tid);if(!t)return;
   const r=t.rounds.find(x=>x.id===rid);if(!r)return;
-  r.azulPairId=document.getElementById('ea_'+rid)?.value||'';
-  r.rojaPairId=document.getElementById('er_'+rid)?.value||'';
-  editingTR=null;editTRData={};save();showToast('Parejas actualizadas');render();
+  const cua=(document.getElementById('ec_'+rid)?.value||'').trim();
+  if(!cua){showToast('Ponle un nombre a la cuadrilla');return;}
+  const az=document.getElementById('ea_'+rid)?.value||'';
+  const ro=document.getElementById('er_'+rid)?.value||'';
+  if(az&&az===ro){showToast('La misma pareja no puede estar en las dos bases');return;}
+  r.cuadrillaName=cua;
+  r.azulPairId=az;
+  r.rojaPairId=ro;
+  editingTR=null;editTRData={};save();showToast('Ronda actualizada');render();
 }
 function startTR(tid,rid){
   const t=getTraining(tid);if(!t)return;
@@ -1499,20 +1509,43 @@ function renderEntrenamientos(){
         const run=runs.find(x=>x.trainingRoundId===r.id);
         const ap=getPair(r.azulPairId);const rp=getPair(r.rojaPairId);
         const rKey='rr_'+r.id;const isRDel=confDel[rKey];
-        return`<div style="border-bottom:1px solid var(--border);padding:6px 0">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-            <div>
-              <span style="font-size:13px;font-weight:500">Ronda ${i+1}${r.label?` — ${r.label}`:''}</span>
-              <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
-                ${ap?`<span class="bpill azul" style="font-size:10px"><span class="dot azul"></span>${ap.name}</span>`:''}
-                ${rp?`<span class="bpill roja" style="font-size:10px"><span class="dot roja"></span>${rp.name}</span>`:''}
+        const isEd=editingTR&&editingTR.trainingId===t.id&&editingTR.roundId===r.id;
+        return`<div style="border-bottom:1px solid var(--border);padding:8px 0">
+          ${isEd?`
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;margin-bottom:8px">Ronda ${i+1}</div>
+            <div class="fg" style="margin-bottom:6px">
+              <div class="field-lbl">Nombre de la cuadrilla <span style="color:var(--red)">*</span></div>
+              <input type="text" id="ec_${r.id}" value="${editTRData.cua||r.cuadrillaName||''}" placeholder="ej. Cuadrilla A...">
+            </div>
+            <div class="bases-grid" style="margin-bottom:8px">
+              <div class="bbox azul"><div class="btit azul"><span class="dot azul"></span>Base Azul</div>
+                <select id="ea_${r.id}">${pairOpts(editTRData.azul||r.azulPairId)}</select></div>
+              <div class="bbox roja"><div class="btit roja"><span class="dot roja"></span>Base Roja</div>
+                <select id="er_${r.id}">${pairOpts(editTRData.roja||r.rojaPairId)}</select></div>
+            </div>
+            <div class="row">
+              <button class="btn btn-green btn-sm" onclick="saveTREdit('${t.id}','${r.id}')">Guardar</button>
+              <button class="btn btn-sm" onclick="editingTR=null;editTRData={};render()">Cancelar</button>
+            </div>
+          `:`
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  <span style="font-size:13px;font-weight:500">Ronda ${i+1}</span>
+                  ${r.cuadrillaName?`<span style="font-size:12px;color:var(--text2);font-weight:500">· ${r.cuadrillaName}</span>`:''}
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
+                  ${ap?`<span class="bpill azul" style="font-size:10px"><span class="dot azul"></span>${ap.name}</span>`:''}
+                  ${rp?`<span class="bpill roja" style="font-size:10px"><span class="dot roja"></span>${rp.name}</span>`:''}
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                ${run?`<span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--green)">${run.score} pts</span>`:`<span style="font-size:12px;color:var(--text3)">Pendiente</span>`}
+                ${!run?`<button class="btn btn-amber btn-sm" onclick="editTR('${t.id}','${r.id}','${r.azulPairId||''}','${r.rojaPairId||''}',decodeURIComponent('${encodeURIComponent(r.cuadrillaName||'')}'))">Editar</button>`:''}
+                ${run&&!isRDel?`<button class="btn btn-red btn-sm" style="font-size:11px;padding:2px 6px" onclick="askDel('${rKey}','rr')">× Borrar</button>`:''}
               </div>
             </div>
-            <div style="display:flex;align-items:center;gap:6px">
-              ${run?`<span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--green)">${run.score} pts</span>`:`<span style="font-size:12px;color:var(--text3)">Pendiente</span>`}
-              ${run&&!isRDel?`<button class="btn btn-red btn-sm" style="font-size:11px;padding:2px 6px" onclick="askDel('${rKey}','rr')">× Borrar</button>`:''}
-            </div>
-          </div>
+          `}
           ${isRDel?`<div class="conf" style="margin-top:4px">
             <span>¿Borrar resultado de Ronda ${i+1}?</span>
             <div style="display:flex;gap:6px">

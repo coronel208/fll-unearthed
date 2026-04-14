@@ -2623,6 +2623,7 @@ function renderGraficas(){
   const nav=`<div class="sub-tabs">
     <button class="sub-tbtn ${graficasSubTab==='evolucion'?'active':''}" onclick="switchGraficasSub('evolucion')">Evolución</button>
     <button class="sub-tbtn ${graficasSubTab==='misiones'?'active':''}"  onclick="switchGraficasSub('misiones')">Por misión</button>
+    <button class="sub-tbtn ${graficasSubTab==='tendencia'?'active':''}" onclick="switchGraficasSub('tendencia')">Tendencia misiones</button>
     <button class="sub-tbtn ${graficasSubTab==='jugadores'?'active':''}" onclick="switchGraficasSub('jugadores')">Por jugador</button>
     <button class="sub-tbtn ${graficasSubTab==='parejas'?'active':''}"   onclick="switchGraficasSub('parejas')">Por pareja</button>
     <button class="sub-tbtn ${graficasSubTab==='cuadrillas'?'active':''}" onclick="switchGraficasSub('cuadrillas')">Por cuadrilla</button>
@@ -2635,6 +2636,56 @@ function renderGraficas(){
         <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Cronológico · punteado = promedio móvil (5 rondas)</div>
         <div style="position:relative;height:250px"><canvas id="gc_evol"></canvas></div>
       </div>`;
+  } else if(graficasSubTab==='tendencia'){
+    const wd=runs.filter(r=>r.missions).sort((a,b)=>a.ts-b.ts);
+    if(!wd.length){
+      html=`<div class="empty">Guarda rondas con datos de misiones para ver la tendencia.</div>`;
+    } else {
+      // Build per-mission running average % over time
+      // Each mission gets a cumulative success rate line
+      const mStats=MISSIONS.map((m,mi)=>{
+        let acc=0,tot=0;
+        const pts=wd.map(r=>{
+          tot++;
+          const s=mScoreFor(m,r.missions);
+          const mx=mMaxScore(m);
+          if(s>=mx) acc++;
+          else if(s>0) acc+=0.5; // partial counts half
+          return Math.round((acc/tot)*100);
+        });
+        const lastPct=pts[pts.length-1]??0;
+        const color=_PAL[mi%_PAL.length];
+        return{m,mi,pts,lastPct,color};
+      }).sort((a,b)=>b.lastPct-a.lastPct);
+
+      const labels=wd.map(r=>fmtTs(r.ts));
+
+      // Mission selector checkboxes
+      const selectorItems=mStats.map(({m,mi,lastPct,color})=>{
+        const checked=!_tendenciaHidden.has(m.code);
+        const pctCol=lastPct>=70?'var(--green-d)':lastPct>=40?'var(--amber)':'var(--red)';
+        return`<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:5px 10px;border-radius:20px;border:1.5px solid ${checked?color+'80':'var(--border)'};background:${checked?color+'12':'var(--surface2)'};transition:all 0.15s;margin:3px">
+          <input type="checkbox" ${checked?'checked':''} onchange="_tendenciaToggle('${m.code}');render()" style="accent-color:${color};width:14px;height:14px;cursor:pointer">
+          <span style="font-size:12px;font-weight:700;color:${checked?color:'var(--text3)'}">${m.code}</span>
+          <span style="font-size:11px;font-weight:800;color:${checked?pctCol:'var(--text3)'}">${lastPct}%</span>
+        </label>`;
+      }).join('');
+
+      html=`
+        <div class="card" style="margin-bottom:14px">
+          <div style="font-size:17px;font-weight:800;margin-bottom:3px">📉 Tendencia de efectividad por misión</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px">% de acierto acumulado a lo largo del tiempo · parcial cuenta 50% · selecciona las misiones que quieres ver</div>
+          <div style="position:relative;height:300px"><canvas id="gc_tendencia"></canvas></div>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text2)">Misiones visibles</div>
+          <div style="display:flex;flex-wrap:wrap;gap:2px">
+            <button class="btn btn-sm" style="margin-right:6px;font-size:11px" onclick="_tendenciaHidden.clear();render()">✓ Todas</button>
+            <button class="btn btn-sm" style="margin-right:10px;font-size:11px" onclick="MISSIONS.forEach(m=>_tendenciaHidden.add(m.code));render()">✕ Ninguna</button>
+            ${selectorItems}
+          </div>
+        </div>`;
+    }
   } else if(graficasSubTab==='misiones'){
     html+=`
       <div class="card" style="margin-bottom:16px">
@@ -2724,6 +2775,11 @@ function renderGraficas(){
 
 /* ── Called after DOM is ready — draws all visible charts ── */
 let _activeCharts=[];
+let _tendenciaHidden=new Set(); // set of mission codes hidden in tendencia chart
+function _tendenciaToggle(code){
+  if(_tendenciaHidden.has(code)) _tendenciaHidden.delete(code);
+  else _tendenciaHidden.add(code);
+}
 function _destroyCharts(){_activeCharts.forEach(c=>{try{c.destroy();}catch(e){}});_activeCharts=[];}
 function _mkChart(id,cfg){
   const el=document.getElementById(id);if(!el)return;
@@ -2763,6 +2819,67 @@ function drawGraficas(){
     ]},options:_baseOpts({interaction:{mode:'index',intersect:false},
       scales:{y:{suggestedMin:0,max:545,ticks:{color:_TICK,font:{size:11}},grid:{color:_GRID},border:{display:false}},
               x:{ticks:{color:_TICK,maxRotation:40,font:{size:10}},grid:{display:false},border:{display:false}}}})});
+  } else if(graficasSubTab==='tendencia'){
+    const wd=runs.filter(r=>r.missions).sort((a,b)=>a.ts-b.ts);
+    if(!wd.length) return;
+    const labels=wd.map(r=>fmtTs(r.ts));
+    const datasets=MISSIONS.map((m,mi)=>{
+      if(_tendenciaHidden.has(m.code)) return null;
+      let acc=0,tot=0;
+      const pts=wd.map(r=>{
+        tot++;
+        const s=mScoreFor(m,r.missions);
+        const mx=mMaxScore(m);
+        if(s>=mx) acc++;
+        else if(s>0) acc+=0.5;
+        return Math.round((acc/tot)*100);
+      });
+      const col=_PAL[mi%_PAL.length];
+      return{
+        label:m.code,
+        data:pts,
+        borderColor:col,
+        backgroundColor:'transparent',
+        borderWidth:2.2,
+        pointRadius:wd.length<=15?4:2,
+        pointBackgroundColor:'#fff',
+        pointBorderColor:col,
+        pointBorderWidth:2,
+        tension:0.35,
+        fill:false
+      };
+    }).filter(Boolean);
+    if(!datasets.length) return;
+    _mkChart('gc_tendencia',{type:'line',data:{labels,datasets},options:_baseOpts({
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{
+          labels:{color:_TXT,font:{size:11,family:'inherit'},padding:10,
+            generateLabels(chart){
+              return chart.data.datasets.map((ds,i)=>({
+                text:ds.label,fillStyle:ds.borderColor,strokeStyle:ds.borderColor,
+                lineWidth:2,hidden:false,datasetIndex:i,fontColor:_TXT
+              }));
+            }
+          },
+          position:'bottom',maxHeight:80
+        },
+        tooltip:{
+          callbacks:{
+            title:items=>`Ronda ${items[0].dataIndex+1} · ${items[0].label}`,
+            label:item=>`${item.dataset.label}: ${item.raw}%`
+          }
+        }
+      },
+      scales:{
+        y:{min:0,max:100,
+          ticks:{color:_TICK,callback:v=>v+'%',font:{size:11}},
+          grid:{color:_GRID},border:{display:false},
+          title:{display:true,text:'% acierto acumulado',color:_TICK,font:{size:11}}
+        },
+        x:{ticks:{color:_TICK,maxRotation:40,font:{size:9}},grid:{display:false},border:{display:false}}
+      }
+    })});
   } else if(graficasSubTab==='misiones'){
     const wd=runs.filter(r=>r.missions);if(!wd.length)return;
     const total=wd.length;

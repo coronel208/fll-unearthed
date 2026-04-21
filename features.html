@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Funciones — STAT</title>
+<link rel="icon" type="image/png" href="icon_stat.png">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --navy:#0E1F35;--teal:#0D6E8A;--cyan:#00C2D4;--gold:#F5A623;
+  --white:#FFFFFF;--off:#F8FAFB;--gray:#5A6A7A;--gray-l:#E8EDF2;--text:#1A2332;
+  --rs:4px;--r:6px;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--white);color:var(--text);overflow-x:hidden;}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:100;background:rgba(14,31,53,0.97);backdrop-filter:blur(12px);border-bottom:2px solid var(--navy);box-shadow:0 3px 0 rgba(0,194,212,0.18);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
+.nav-logo img{height:34px;}
+.nav-logo-text{font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.6px;text-transform:uppercase;}
+.nav-right{display:flex;align-items:center;gap:8px;}
+.nav-link{font-size:0.8rem;font-weight:700;color:rgba(255,255,255,0.65);text-decoration:none;padding:6px 12px;border-radius:var(--rs);transition:all 0.15s;}
+.nav-link:hover{color:#fff;background:rgba(255,255,255,0.08);}
+.nav-btn{font-size:0.8rem;font-weight:800;color:var(--navy);background:var(--cyan);border:none;border-radius:var(--rs);padding:8px 18px;text-decoration:none;box-shadow:3px 3px 0 rgba(0,194,212,0.35);transition:all 0.12s;}
+.nav-btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 rgba(0,194,212,0.4);}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;border:none;background:none;}
+.hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all 0.25s;}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hamburger.open span:nth-child(2){opacity:0;}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mob-menu{display:none;flex-direction:column;gap:6px;position:fixed;top:60px;left:0;right:0;z-index:99;background:rgba(10,22,40,0.98);backdrop-filter:blur(16px);padding:20px 24px;border-bottom:1px solid rgba(0,194,212,0.2);}
+.mob-menu.open{display:flex;}
+.mob-menu a{font-size:1rem;font-weight:700;color:rgba(255,255,255,0.8);text-decoration:none;padding:12px 16px;border-radius:var(--rs);border:1px solid rgba(255,255,255,0.1);transition:all 0.15s;}
+.mob-menu a:hover{background:rgba(255,255,255,0.08);}
+.mob-menu .m-app{background:var(--cyan);color:var(--navy);border-color:var(--cyan);text-align:center;font-weight:800;margin-top:4px;}
+
+/* ── HERO ── */
+.page-hero{background:var(--navy);padding:88px 24px 72px;text-align:center;position:relative;overflow:hidden;}
+.page-hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(0,194,212,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,194,212,0.06) 1px,transparent 1px);background-size:36px 36px;}
+.ph-inner{position:relative;z-index:1;max-width:680px;margin:0 auto;}
+.sec-label{font-size:0.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.sec-label::before,.sec-label::after{content:'';width:20px;height:2px;background:var(--cyan);border-radius:2px;}
+.ph-title{font-size:clamp(2rem,5vw,3rem);font-weight:900;color:#fff;line-height:1.15;margin-bottom:16px;}
+.ph-title span{color:var(--cyan);}
+.ph-desc{font-size:1rem;color:rgba(255,255,255,0.65);line-height:1.7;}
+
+/* ── SECTIONS ── */
+.section{padding:80px 24px;}
+.section.alt{background:var(--off);}
+.sec-in{max-width:1040px;margin:0 auto;}
+.sec-hl{font-size:0.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sec-hl::before{content:'';width:16px;height:2px;background:var(--teal);border-radius:2px;}
+.sec-title{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;color:var(--navy);line-height:1.18;margin-bottom:14px;}
+.sec-title span{color:var(--teal);}
+.sec-desc{font-size:0.98rem;color:var(--gray);line-height:1.72;max-width:600px;}
+
+/* ── FEATURE GRID ── */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px;margin-top:48px;}
+.fcard{
+  background:var(--white);border:2px solid var(--navy);border-radius:var(--r);
+  padding:28px 22px;box-shadow:4px 4px 0 rgba(14,31,53,0.1);
+  transition:all 0.13s;position:relative;overflow:hidden;
+}
+.fcard::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cyan);transform:scaleX(0);transform-origin:left;transition:transform 0.22s;}
+.fcard:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 rgba(14,31,53,0.12);}
+.fcard:hover::after{transform:scaleX(1);}
+.ficon{width:50px;height:50px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:16px;border:2px solid var(--navy);box-shadow:3px 3px 0 rgba(14,31,53,0.08);}
+.ftitle{font-size:1rem;font-weight:800;color:var(--navy);margin-bottom:8px;}
+.fdesc{font-size:0.87rem;color:var(--gray);line-height:1.65;}
+
+/* ── STEPS ── */
+.steps{display:flex;flex-direction:column;gap:0;margin-top:48px;position:relative;}
+.steps::before{content:'';position:absolute;left:27px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--cyan),var(--navy));}
+.step{display:flex;gap:28px;align-items:flex-start;padding-bottom:38px;}
+.snum{width:56px;height:56px;border-radius:var(--rs);background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:900;flex-shrink:0;border:2px solid var(--navy);box-shadow:3px 3px 0 var(--cyan);position:relative;z-index:1;font-family:'JetBrains Mono',monospace;}
+.snum.gold{background:var(--gold);color:var(--navy);border-color:var(--navy);box-shadow:3px 3px 0 rgba(14,31,53,0.3);}
+.scon{padding-top:12px;}
+.stitle{font-size:1.05rem;font-weight:800;color:var(--navy);margin-bottom:6px;}
+.sdesc{font-size:0.88rem;color:var(--gray);line-height:1.65;}
+
+/* ── CTA ── */
+.cta-bar{background:var(--navy);padding:72px 24px;text-align:center;position:relative;overflow:hidden;}
+.cta-bar::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(0,194,212,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,194,212,0.05) 1px,transparent 1px);background-size:28px 28px;}
+.cta-in{position:relative;z-index:1;}
+.cta-title{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;color:#fff;margin-bottom:12px;}
+.cta-sub{font-size:0.95rem;color:rgba(255,255,255,0.6);margin-bottom:32px;}
+.btn-gold{background:var(--gold);color:var(--navy);border:2px solid var(--navy);border-radius:var(--rs);padding:14px 36px;font-size:0.95rem;font-weight:800;text-decoration:none;display:inline-block;box-shadow:5px 5px 0 rgba(14,31,53,0.4);transition:all 0.12s;}
+.btn-gold:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 rgba(14,31,53,0.4);}
+.btn-gold:active{transform:translate(2px,2px);box-shadow:2px 2px 0 rgba(14,31,53,0.4);}
+
+/* ── FOOTER ── */
+footer{background:var(--navy);color:rgba(255,255,255,0.42);padding:24px;text-align:center;border-top:2px solid var(--teal);font-size:0.78rem;}
+footer strong{color:rgba(255,255,255,0.78);}
+footer a{color:var(--cyan);text-decoration:none;}
+
+/* ── REVEAL ── */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity 0.5s ease,transform 0.5s ease;}
+.reveal.visible{opacity:1;transform:none;}
+.d1{transition-delay:0.08s;}.d2{transition-delay:0.16s;}.d3{transition-delay:0.24s;}
+
+@media(max-width:700px){
+  .nav-link,.nav-btn{display:none;}
+  .hamburger{display:flex;}
+  .steps::before{left:23px;}
+  .snum{width:48px;height:48px;font-size:0.95rem;}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="index.html">
+    <img src="icon_stat.png" alt="STAT">
+    <span class="nav-logo-text">Scoring & Team Analytics</span>
+  </a>
+  <div class="nav-right">
+    <a href="index.html" class="nav-link">Inicio</a>
+    <a href="about.html" class="nav-link">Nosotros</a>
+    <a href="app.html" class="nav-btn">Abrir App →</a>
+  </div>
+  <button class="hamburger" id="ham" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+</nav>
+<div class="mob-menu" id="mob">
+  <a href="index.html" onclick="toggleMenu()">🏠 Inicio</a>
+  <a href="about.html" onclick="toggleMenu()">🤖 Nosotros</a>
+  <a href="app.html" class="m-app">🚀 Abrir App</a>
+</div>
+
+<!-- PAGE HERO -->
+<div class="page-hero">
+  <div class="ph-inner">
+    <div class="sec-label">Funcionalidades</div>
+    <h1 class="ph-title">Todo lo que tu equipo<br><span>necesita para ganar</span></h1>
+    <p class="ph-desc">STAT centraliza el análisis de tu equipo FLL en un solo lugar. Sin hojas de cálculo, sin confusión — solo datos que importan.</p>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section alt">
+  <div class="sec-in">
+    <div class="feat-grid">
+      <div class="fcard reveal">
+        <div class="ficon" style="background:#E8F8FA">⏱️</div>
+        <div class="ftitle">Cronómetro oficial</div>
+        <p class="fdesc">Temporizador de 2:30 con cuenta regresiva animada tipo torneo. Entrena con el mismo ritmo y presión de la competencia real.</p>
+      </div>
+      <div class="fcard reveal d1">
+        <div class="ficon" style="background:#FFF8E8">🎯</div>
+        <div class="ftitle">Registro de misiones en vivo</div>
+        <p class="fdesc">Marca cada misión mientras corre el tiempo. Puntaje calculado automáticamente con validaciones de equipamiento incluidas.</p>
+      </div>
+      <div class="fcard reveal d2">
+        <div class="ficon" style="background:#E8FAF0">📊</div>
+        <div class="ftitle">Estadísticas en profundidad</div>
+        <p class="fdesc">Ranking por pareja, cuadrilla y jugador. Mejor puntaje, promedio, tendencias — todo calculado en segundos.</p>
+      </div>
+      <div class="fcard reveal">
+        <div class="ficon" style="background:#F0E8FA">📈</div>
+        <div class="ftitle">Gráficas de evolución</div>
+        <p class="fdesc">Visualiza el progreso ronda a ronda. Detecta qué misiones mejoraron y cuáles necesitan más práctica con gráficas claras.</p>
+      </div>
+      <div class="fcard reveal d1">
+        <div class="ficon" style="background:#E8EDF8">📉</div>
+        <div class="ftitle">Tendencia por misión</div>
+        <p class="fdesc">Gráfica de líneas que muestra el % de acierto acumulado por misión a través del tiempo. Selecciona qué misiones comparar.</p>
+      </div>
+      <div class="fcard reveal d2">
+        <div class="ficon" style="background:#FAE8E8">🏋️</div>
+        <div class="ftitle">Gestión de entrenamientos</div>
+        <p class="fdesc">Planea sesiones completas, asigna cuadrillas y bases, lleva historial de cada entrenamiento con comentarios.</p>
+      </div>
+      <div class="fcard reveal">
+        <div class="ficon" style="background:#EAFAF0">🔍</div>
+        <div class="ftitle">Buscador avanzado</div>
+        <p class="fdesc">Filtra cualquier ronda por jugador, pareja, cuadrilla o rango de puntaje. Encuentra exactamente lo que necesitas.</p>
+      </div>
+      <div class="fcard reveal d1">
+        <div class="ficon" style="background:#FFF4E0">💬</div>
+        <div class="ftitle">Comentarios por ronda</div>
+        <p class="fdesc">Registra observaciones de cada ronda para hacer seguimiento de errores, mejoras y situaciones especiales.</p>
+      </div>
+      <div class="fcard reveal d2">
+        <div class="ficon" style="background:#E8F0FA">☁️</div>
+        <div class="ftitle">Sincronización en la nube</div>
+        <p class="fdesc">Datos en Firebase en tiempo real. Accede desde cualquier dispositivo con el nombre del equipo y PIN de 4 dígitos.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <div class="sec-in">
+    <div class="reveal">
+      <div class="sec-hl">Cómo funciona</div>
+      <h2 class="sec-title">De la cancha<br><span>a los datos</span></h2>
+      <p class="sec-desc">En cuatro pasos simples, conviertes sesiones de práctica en inteligencia táctica para el torneo.</p>
+    </div>
+    <div class="steps reveal">
+      <div class="step">
+        <div class="snum">01</div>
+        <div class="scon">
+          <div class="stitle">Crea tu equipo</div>
+          <p class="sdesc">Registra el nombre del equipo y crea un PIN de 4 dígitos. Accede desde cualquier dispositivo de forma segura.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="snum">02</div>
+        <div class="scon">
+          <div class="stitle">Configura jugadores y parejas</div>
+          <p class="sdesc">Agrega a todos los miembros y crea las parejas que competirán en Base Azul y Base Roja usando drag & drop.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="snum">03</div>
+        <div class="scon">
+          <div class="stitle">Corre y registra rondas</div>
+          <p class="sdesc">Activa el cronómetro de 2:30, marca misiones en tiempo real y guarda el puntaje automáticamente al finalizar.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="snum gold">04</div>
+        <div class="scon">
+          <div class="stitle">Analiza y mejora</div>
+          <p class="sdesc">Explora gráficas, rankings y efectividad por misión. Filtra cualquier ronda por jugador, pareja o cuadrilla para encontrar áreas de mejora.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-bar">
+  <div class="cta-in">
+    <h2 class="cta-title">¿Listo para probar STAT?</h2>
+    <p class="cta-sub">Gratis · Sin instalación · Funciona en cualquier dispositivo</p>
+    <a href="app.html" class="btn-gold">🚀 Abrir STAT ahora</a>
+  </div>
+</div>
+
+<footer>
+  <p>Hecho con 🧱 por <strong>Mecha Titans</strong> — <a href="about.html">equipo de la FLL</a> · <strong>STAT</strong> Temporada 2025–2026</p>
+</footer>
+
+<script>
+function toggleMenu(){
+  document.getElementById('ham').classList.toggle('open');
+  document.getElementById('mob').classList.toggle('open');
+}
+const obs = new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible');});},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sobre Nosotros — STAT · Mecha Titans</title>
+<link rel="icon" type="image/png" href="icon_stat.png">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --navy:#0E1F35;--teal:#0D6E8A;--cyan:#00C2D4;--gold:#F5A623;
+  --white:#FFFFFF;--off:#F8FAFB;--gray:#5A6A7A;--gray-l:#E8EDF2;--text:#1A2332;
+  --rs:4px;--r:6px;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--white);color:var(--text);overflow-x:hidden;}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:100;background:rgba(14,31,53,0.97);backdrop-filter:blur(12px);border-bottom:2px solid var(--navy);box-shadow:0 3px 0 rgba(0,194,212,0.18);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
+.nav-logo img{height:34px;}
+.nav-logo-text{font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.6px;text-transform:uppercase;}
+.nav-right{display:flex;align-items:center;gap:8px;}
+.nav-link{font-size:0.8rem;font-weight:700;color:rgba(255,255,255,0.65);text-decoration:none;padding:6px 12px;border-radius:var(--rs);transition:all 0.15s;}
+.nav-link:hover{color:#fff;background:rgba(255,255,255,0.08);}
+.nav-btn{font-size:0.8rem;font-weight:800;color:var(--navy);background:var(--cyan);border:none;border-radius:var(--rs);padding:8px 18px;text-decoration:none;box-shadow:3px 3px 0 rgba(0,194,212,0.35);transition:all 0.12s;}
+.nav-btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 rgba(0,194,212,0.4);}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;border:none;background:none;}
+.hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all 0.25s;}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hamburger.open span:nth-child(2){opacity:0;}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mob-menu{display:none;flex-direction:column;gap:6px;position:fixed;top:60px;left:0;right:0;z-index:99;background:rgba(10,22,40,0.98);backdrop-filter:blur(16px);padding:20px 24px;border-bottom:1px solid rgba(0,194,212,0.2);}
+.mob-menu.open{display:flex;}
+.mob-menu a{font-size:1rem;font-weight:700;color:rgba(255,255,255,0.8);text-decoration:none;padding:12px 16px;border-radius:var(--rs);border:1px solid rgba(255,255,255,0.1);transition:all 0.15s;}
+.mob-menu a:hover{background:rgba(255,255,255,0.08);}
+.mob-menu .m-app{background:var(--cyan);color:var(--navy);border-color:var(--cyan);text-align:center;font-weight:800;margin-top:4px;}
+
+/* ── HERO ── */
+.page-hero{background:var(--navy);padding:88px 24px 72px;text-align:center;position:relative;overflow:hidden;}
+.page-hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(0,194,212,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,194,212,0.06) 1px,transparent 1px);background-size:36px 36px;}
+.ph-inner{position:relative;z-index:1;max-width:640px;margin:0 auto;}
+.sec-label{font-size:0.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.sec-label::before,.sec-label::after{content:'';width:20px;height:2px;background:var(--cyan);border-radius:2px;}
+.ph-title{font-size:clamp(2rem,5vw,3rem);font-weight:900;color:#fff;line-height:1.15;margin-bottom:16px;}
+.ph-title span{color:var(--gold);}
+.ph-desc{font-size:1rem;color:rgba(255,255,255,0.65);line-height:1.7;}
+
+/* ── TEAM SECTION ── */
+.team-section{background:var(--navy);padding:0 24px 80px;}
+.team-inner{max-width:1040px;margin:0 auto;}
+
+/* ── PHOTO HERO ── */
+.photo-block{
+  position:relative;
+  border-radius:var(--r);overflow:hidden;
+  border:3px solid rgba(0,194,212,0.4);
+  box-shadow:8px 8px 0 rgba(0,194,212,0.22);
+  height:720px;
+}
+.photo-block img{
+  width:100%;height:100%;
+  object-fit:cover;
+  /* Subimos la imagen para mostrar las caras del equipo, no el techo */
+  object-position:center 38%;
+  display:block;
+}
+.photo-badge{
+  position:absolute;bottom:16px;left:16px;
+  background:var(--gold);color:var(--navy);
+  border:2px solid var(--navy);border-radius:var(--rs);
+  padding:8px 16px;font-size:0.82rem;font-weight:800;
+  box-shadow:3px 3px 0 rgba(14,31,53,0.35);
+  display:flex;align-items:center;gap:8px;
+}
+
+/* ── ABOUT CONTENT ── */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;margin-top:52px;}
+.about-text{}
+.sec-hl{font-size:0.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sec-hl::before{content:'';width:16px;height:2px;background:var(--cyan);border-radius:2px;}
+.about-title{font-size:clamp(1.7rem,3.5vw,2.3rem);font-weight:900;color:#fff;line-height:1.2;margin-bottom:18px;}
+.about-title span{color:var(--gold);}
+.about-p{font-size:0.95rem;color:rgba(255,255,255,0.68);line-height:1.75;margin-bottom:14px;}
+.about-p strong{color:#fff;}
+.about-p a{color:var(--cyan);text-decoration:none;}
+.about-p a:hover{text-decoration:underline;}
+
+/* ── SOCIAL ── */
+.social-title{font-size:0.72rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.4);margin:28px 0 12px;}
+.socials{display:flex;flex-direction:column;gap:10px;}
+.sbtn{
+  display:inline-flex;align-items:center;gap:12px;
+  border:2px solid rgba(255,255,255,0.18);border-radius:var(--rs);
+  padding:12px 20px;font-size:0.9rem;font-weight:700;
+  color:#fff;text-decoration:none;
+  transition:all 0.15s;
+}
+.sbtn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.5);transform:translateX(4px);}
+.sbtn svg{width:22px;height:22px;flex-shrink:0;}
+.sbtn.ig{border-color:rgba(225,48,108,0.4);}
+.sbtn.ig:hover{background:rgba(225,48,108,0.12);border-color:rgba(225,48,108,0.8);}
+.sbtn.tt{border-color:rgba(0,242,234,0.35);}
+.sbtn.tt:hover{background:rgba(0,242,234,0.08);border-color:rgba(0,242,234,0.8);}
+.sbtn-handle{font-size:0.78rem;color:rgba(255,255,255,0.5);margin-left:auto;font-family:'JetBrains Mono',monospace;}
+
+/* ── STAT ABOUT ── */
+.stat-about{background:rgba(0,194,212,0.07);border:1px solid rgba(0,194,212,0.2);border-radius:var(--r);padding:28px 24px;margin-top:28px;}
+.stat-about-title{font-size:1rem;font-weight:800;color:var(--cyan);margin-bottom:10px;}
+.stat-about-p{font-size:0.88rem;color:rgba(255,255,255,0.65);line-height:1.7;}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:52px;}
+.stat-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:var(--r);padding:20px;text-align:center;}
+.stat-n{font-size:2rem;font-weight:900;color:var(--cyan);font-family:'JetBrains Mono',monospace;line-height:1;}
+.stat-l{font-size:0.7rem;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:0.8px;text-transform:uppercase;margin-top:5px;}
+
+/* ── CTA ── */
+.cta-bar{background:linear-gradient(135deg,var(--teal),var(--navy));padding:72px 24px;text-align:center;border-top:2px solid rgba(0,194,212,0.3);}
+.cta-title{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;color:#fff;margin-bottom:12px;}
+.cta-sub{font-size:0.95rem;color:rgba(255,255,255,0.6);margin-bottom:32px;}
+.btn-gold{background:var(--gold);color:var(--navy);border:2px solid var(--navy);border-radius:var(--rs);padding:14px 36px;font-size:0.95rem;font-weight:800;text-decoration:none;display:inline-block;box-shadow:5px 5px 0 rgba(14,31,53,0.4);transition:all 0.12s;}
+.btn-gold:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 rgba(14,31,53,0.4);}
+.btn-gold:active{transform:translate(2px,2px);box-shadow:2px 2px 0 rgba(14,31,53,0.3);}
+
+/* ── FOOTER ── */
+footer{background:var(--navy);color:rgba(255,255,255,0.42);padding:24px;text-align:center;border-top:2px solid var(--teal);font-size:0.78rem;}
+footer strong{color:rgba(255,255,255,0.78);}
+footer a{color:var(--cyan);text-decoration:none;}
+
+/* ── REVEAL ── */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity 0.5s ease,transform 0.5s ease;}
+.reveal.visible{opacity:1;transform:none;}
+.d1{transition-delay:0.12s;}.d2{transition-delay:0.22s;}
+
+@media(max-width:860px){
+  .about-grid{grid-template-columns:1fr;gap:40px;}
+  .photo-block{height:380px;}
+  .stats-row{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:700px){
+  .nav-link,.nav-btn{display:none;}
+  .hamburger{display:flex;}
+  .photo-block{height:300px;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:480px){
+  .stats-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="index.html">
+    <img src="icon_stat.png" alt="STAT">
+    <span class="nav-logo-text">Scoring & Team Analytics</span>
+  </a>
+  <div class="nav-right">
+    <a href="index.html" class="nav-link">Inicio</a>
+    <a href="features.html" class="nav-link">Funciones</a>
+    <a href="app.html" class="nav-btn">Abrir App →</a>
+  </div>
+  <button class="hamburger" id="ham" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+</nav>
+<div class="mob-menu" id="mob">
+  <a href="index.html" onclick="toggleMenu()">🏠 Inicio</a>
+  <a href="features.html" onclick="toggleMenu()">⚡ Funciones</a>
+  <a href="app.html" class="m-app">🚀 Abrir App</a>
+</div>
+
+<!-- PAGE HERO -->
+<div class="page-hero">
+  <div class="ph-inner">
+    <div class="sec-label">Quiénes somos</div>
+    <h1 class="ph-title">Somos <span>Mecha Titans</span></h1>
+    <p class="ph-desc">Competidores de la FIRST LEGO League, listos para trabajar en equipo y ser campeones. STAT es nuestra herramienta, y ahora también la tuya.</p>
+  </div>
+</div>
+
+<!-- TEAM SECTION -->
+<section class="team-section">
+  <div class="team-inner">
+
+    <!-- Photo -->
+    <div class="photo-block reveal" style="margin-top:0;border-radius:0 0 var(--r) var(--r);border-top:none;">
+      <img src="team.png" alt="Equipo Mecha Titans — Campeones Regionales FLL Unearthed">
+      <div class="photo-badge">
+        🏆 Campeones Regionales · FLL Unearthed
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row reveal">
+      <div class="stat-box"><div class="stat-n">FLL</div><div class="stat-l">Competencia</div></div>
+      <div class="stat-box"><div class="stat-n">🥇</div><div class="stat-l">Campeones Regionales</div></div>
+      <div class="stat-box"><div class="stat-n">2026</div><div class="stat-l">Temporada activa</div></div>
+    </div>
+
+    <!-- About grid -->
+    <div class="about-grid">
+      <div class="about-text reveal">
+        <div class="sec-hl">Nuestro equipo</div>
+        <h2 class="about-title">Entrenamos duro,<br><span>competimos más duro</span></h2>
+        <p class="about-p">
+          Somos el equipo <strong>Mecha Titans</strong>, competidores de la <strong>FIRST LEGO League</strong> listos para trabajar en equipo y ser campeones 🔥
+        </p>
+        <p class="about-p">
+          Nos apasiona la robótica, la programación y el trabajo en equipo. Cada entrenamiento lo damos todo — y ahora con STAT, también analizamos cada ronda para mejorar con datos.
+        </p>
+        <p class="about-p">
+          Puedes encontrarnos en redes sociales como <a href="https://www.instagram.com/mechatitans" target="_blank">@mechatitans</a> donde compartimos nuestro proceso, competencias y logros.
+        </p>
+
+        <div class="social-title">Síguenos en redes</div>
+        <div class="socials">
+          <a href="https://www.instagram.com/mechatitans" target="_blank" rel="noopener" class="sbtn ig">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+              <circle cx="12" cy="12" r="4"/>
+              <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/>
+            </svg>
+            Instagram
+            <span class="sbtn-handle">@mechatitans</span>
+          </a>
+          <a href="https://www.tiktok.com/@mechatitans" target="_blank" rel="noopener" class="sbtn tt">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.88a8.26 8.26 0 004.84 1.55V7a4.85 4.85 0 01-1.07-.31z"/>
+            </svg>
+            TikTok
+            <span class="sbtn-handle">@mechatitans</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="reveal d1">
+        <div class="stat-about">
+          <div class="stat-about-title">📊 Por qué creamos STAT</div>
+          <p class="stat-about-p">
+            Necesitábamos entender exactamente qué misiones fallábamos, qué parejas rendían mejor y cómo progresábamos sesión a sesión. Las hojas de cálculo no eran suficientes — así que construimos STAT.
+          </p>
+        </div>
+
+        <div class="stat-about" style="margin-top:14px;border-color:rgba(245,166,35,0.3);background:rgba(245,166,35,0.06);">
+          <div class="stat-about-title" style="color:var(--gold);">🏆 Logros del equipo</div>
+          <p class="stat-about-p">
+            Campeones Regionales en la temporada FLL Unearthed 2025–2026. Representamos a nuestra institución con orgullo y seguimos mejorando cada día.
+          </p>
+        </div>
+
+        <div class="stat-about" style="margin-top:14px;border-color:rgba(255,255,255,0.12);background:rgba(255,255,255,0.03);">
+          <div class="stat-about-title" style="color:rgba(255,255,255,0.8);">🤝 Para la comunidad FLL</div>
+          <p class="stat-about-p">
+            STAT es gratis y está disponible para todos los equipos de la FIRST LEGO League. Lo construimos, lo usamos y ahora lo compartimos con la comunidad.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-bar">
+  <h2 class="cta-title">¿Quieres usar STAT<br>en tu equipo?</h2>
+  <p class="cta-sub">Gratis · Sin instalación · Para todos los equipos FLL</p>
+  <a href="app.html" class="btn-gold">🚀 Abrir STAT ahora</a>
+</div>
+
+<footer>
+  <p>Hecho con 🧱 por <strong>Mecha Titans</strong> — equipo de la <strong>FIRST LEGO League</strong></p>
+  <p style="margin-top:4px;"><strong>STAT</strong> — Scoring & Team Analytics Tool · Temporada 2025–2026</p>
+</footer>
+
+<script>
+function toggleMenu(){
+  document.getElementById('ham').classList.toggle('open');
+  document.getElementById('mob').classList.toggle('open');
+}
+const obs = new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible');});},{threshold:0.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
